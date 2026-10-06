@@ -1,4 +1,3 @@
-
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -25,13 +24,16 @@ export const forgotPassword = async (req: Request, res: Response) => {
       });
     }
 
+    // Generate a 6-digit OTP
     const code = crypto.randomInt(100000, 1000000).toString();
 
+    // OTP expires after 10 minutes
     user.resetCode = code;
     user.resetCodeExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     await user.save();
 
+    // Send OTP through Brevo SMTP
     await sendResetCodeEmail(email, code);
 
     return res.status(200).json({
@@ -57,6 +59,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       });
     }
 
+    // Check email, OTP and expiration
     const user = await User.findOne({
       email,
       resetCode: code,
@@ -69,8 +72,10 @@ export const resetPassword = async (req: Request, res: Response) => {
       });
     }
 
+    // Hash the new password
     user.password = await bcrypt.hash(newPassword, 10);
 
+    // Remove used OTP
     user.resetCode = undefined;
     user.resetCodeExpires = undefined;
 
@@ -87,3 +92,4 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
   }
 };
+
